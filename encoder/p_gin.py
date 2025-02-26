@@ -2,7 +2,7 @@ from torch import nn
 import torch
 from torch.nn import Sequential, Linear, BatchNorm1d, ReLU
 import torch.nn.functional as F
-from conv.gin_conv import MyGINConv
+from encoder.gin_conv import MyGINConv
 
 
 class PGIN(torch.nn.Module):

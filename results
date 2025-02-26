@@ -1,0 +1,57 @@
+NBA
+epoch=100, 3次实验
+p(GIN)+s(GIN), final result: 0.8403±0.0142
+
+p(GIN), final result: 0.8105±0.0042
+s(GIN), final result: 0.8072±0.0133
+
+p(GIN)+s(GIN),coreness, final result: 0.8130±0.0425
+
+p(gat)+s(GIN),final result: 0.8258±0.0226
+
+p(sage)+s(GIN), final result: 0.8211±0.0173
+
+
+
+
+
+NBA
+1条跳直接取最多
+==true rate1==0.8138957816377171
+==total_same1==15372
+==total_same1 rate ==0.7236606722530835
+
+2条跳直接取最多
+==true rate 2==0.7295285359801489
+==total_same2==91382
+==total_same2 rate ==4.301948969023632
+
+1条跳>=core直接取最多
+==true rate3==0.794044665012407
+==total_same3==15372
+==total_same3 rate ==0.7236606722530835
+
+2条跳>=core直接取最多
+==true rate3==0.794044665012407
+==total_same3==15372
+==total_same3 rate ==0.7236606722530835
+
+
+Poekec_n
+1条跳直接取最多
+==true rate1==0.1453904740252359
+==total_same1==3330
+==total_same1 rate ==0.4943586698337292
+
+==true rate 2==0.1347050130726384
+==total_same2==18796
+==total_same2 rate ==2.790380047505938*2
+
+1条跳>=core直接取最多
+==true rate3==0.14550414914175286
+==total_same3==3330
+==total_same3 rate ==0.4943586698337292
+
+==true rate 4==0.13720586563601228
+==total_same4==18796
+==total_same4 rate ==2.790380047505938*2

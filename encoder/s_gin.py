@@ -1,12 +1,9 @@
-from typing import Optional
 from torch import nn
 import torch
 from torch.nn import Sequential, Linear, BatchNorm1d, ReLU
-from torch_geometric.nn import GINConv, global_add_pool
 import torch.nn.functional as F
-from torch_sparse import SparseTensor
 
-from conv.gin_conv import MyGINConv
+from encoder.gin_conv import MyGINConv
 from functional.pooling import my_global_add_pool, center_node_pooling
 
 

@@ -1,8 +1,7 @@
 import torch
 from torch import nn
-from torch_geometric.nn import SAGEConv
 import torch.nn.functional as F
-from conv.sage_conv import MySAGEConv
+from encoder.sage_conv import MySAGEConv
 
 
 class GraphSAGE(nn.Module):
@@ -16,6 +15,7 @@ class GraphSAGE(nn.Module):
             return_emb,
     ):
         super(GraphSAGE, self).__init__()
+
         self.convs = nn.ModuleList()
         self.convs.append(MySAGEConv(in_channels, hidden_channels))
         for _ in range(num_layers - 1):
@@ -41,10 +41,12 @@ class GraphSAGE(nn.Module):
         if not self.return_emb:
             self.linear.reset_parameters()
 
-    def forward(self, x, edge_index, edge_weight):
+    # def forward(self, x, edge_index, edge_weight):
+    def forward(self, x, edge_index, edge_weight=None):
         x = F.dropout(x, p=self.dropout, training=self.training)
         for i in range(self.num_layers):
-            x = self.convs[i](x, edge_index, edge_weight)
+            # x = self.convs[i](x, edge_index, edge_weight)
+            x = self.convs[i](x, edge_index)
             if i == self.num_layers - 1 and self.return_emb:
                 return x
             if i == self.num_layers - 1:

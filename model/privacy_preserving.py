@@ -96,7 +96,9 @@ def train(model, device, optimizer, train_loader, whole_graph, train_idx):
         batch_s.to(device)
         optimizer.zero_grad()
         batch_p = whole_graph
+
         x = model.forward(batch_p, batch_s, glo_batch_idx)
+
         batch_loss = F.cross_entropy(x, batch_s.y)
         batch_loss.backward()
         optimizer.step()

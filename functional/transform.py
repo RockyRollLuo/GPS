@@ -12,6 +12,7 @@ def transform_in_memory(sub_graph, whole_graph, opt):
     whole_graph = copy.deepcopy(whole_graph).cpu()
     walk_length = opt.in_channels["rwse_in"] if "rwse_in" in opt.in_channels else None
     if not opt.pe_types: return sub_graph
+
     metric, rwse = None, None
     netx_graph = to_networkx(whole_graph, to_undirected=True)
     if "mix" in opt.pe_types:
@@ -29,15 +30,23 @@ def transform_in_memory(sub_graph, whole_graph, opt):
         if 'local_cc' in properties:
             local_cc = networkx.clustering(netx_graph)
             metric.append(torch.tensor(list(local_cc.values())).reshape(-1, 1))
-        metric = torch.cat(metric, dim=-1)
-        mean_f = torch.mean(metric, dim=0)
+
+        if 'coreness' in properties: #
+            core_number = networkx.core_number(netx_graph)
+            metric.append(torch.tensor(list(core_number.values())).reshape(-1, 1))
+
+
+        metric = torch.cat(metric, dim=-1) #
+        mean_f = torch.mean(metric, dim=0) #行被压缩，只剩列
         std_f = torch.std(metric, dim=0)
         metric = (metric - mean_f) / std_f
         metric = metric.to(opt.device)
 
     if 'rwse' in opt.pe_types:
-        whole_graph = AddRandomWalkPE(walk_length=walk_length, attr_name='rwse')(whole_graph.cpu())
+        whole_graph = AddRandomWalkPE(walk_length=walk_length, attr_name='rwse')(whole_graph.cpu()) #torch_geometric.transforms.AddRandomWalkPE
         rwse = whole_graph.rwse
+
+
 
     data_list = []
     whole_graph.to(opt.device)

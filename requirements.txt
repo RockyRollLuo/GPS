@@ -1,7 +1,16 @@
-networkx==2.6.3
-numpy==1.22.0
-pandas==1.3.5
-scikit_learn==1.0.2
-scipy==1.6.2
-torch-geometric==2.3.1
-tqdm==4.65.0
+networkx
+numpy
+pandas
+scikit_learn
+scipy
+torch-geometric
+tqdm
+
+
+# networkx==2.6.3
+# numpy==1.22.0
+# pandas==1.3.5
+# scikit_learn==1.0.2
+# scipy==1.6.2
+# torch-geometric==2.3.1
+# tqdm==4.65.0

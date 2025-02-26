@@ -9,6 +9,13 @@ import torch_geometric.transforms as T
 from torch_geometric.io.planetoid import index_to_mask
 from torch_geometric.utils import k_hop_subgraph
 from tqdm import tqdm
+import warnings
+
+warnings.simplefilter("ignore", category=FutureWarning)
+
+
+# # 将自定义或必要的类手动加入安全白名单
+# torch.serialization.add_safe_globals(Data)
 
 
 class LoadSubgraph(InMemoryDataset):
@@ -30,6 +37,7 @@ class LoadSubgraph(InMemoryDataset):
         self.device = device
         super(LoadSubgraph, self).__init__(root, transform, pre_transform, pre_filter)
         self.data, self.slices = torch.load(self.processed_paths[0])
+        # self.data, self.slices = torch.load(self.processed_paths[0], weights_only=True)
 
     @property
     def raw_file_names(self):
@@ -48,6 +56,14 @@ class LoadSubgraph(InMemoryDataset):
     def download(self):
         raise NotImplementedError('No download allowed')
 
+
+    """
+        处理原始数据并生成子图。
+        加载整个图数据，并根据设备情况将其移动到指定设备。
+        遍历每个节点，生成 k 跳子图（pyg自带的包），并将其添加到数据列表中。
+        应用预过滤和预处理操作。
+        将数据列表整理成批，并保存处理后的数据。
+    """
     def process(self):
         whole_graph = load_data(data_name=self.data_name, target=self.sens_attr, path=self.raw_dir, split=False)
         if self.device is not None: whole_graph = whole_graph.to(self.device)
@@ -55,7 +71,7 @@ class LoadSubgraph(InMemoryDataset):
         for k in tqdm(range(0, whole_graph.num_nodes)):
             p = k_hop_subgraph(k, self.hops, whole_graph.edge_index, relabel_nodes=True,
                                num_nodes=whole_graph.num_nodes)
-            ego_edge, nodes_involved, ego_map = p[1], p[0], p[2]
+            nodes_involved, ego_edge, ego_map = p[0], p[1], p[2]
             ego_x = whole_graph.x[nodes_involved, :]
             ego_y = whole_graph.y[k]
             ego_net = Data(x=ego_x, edge_index=ego_edge, y=ego_y, mapping=ego_map)
@@ -101,9 +117,11 @@ def load_data(data_name, target, train_ratio=0.1, path=None, split=True):
 
 def load_nba(data_name, target_attr, train_ratio, path, split):
     idx_features_labels = pd.read_csv(os.path.join(path, "{}.csv".format(data_name)))
+
     # sensitive attribute
     sens = idx_features_labels[target_attr].values
     sens = torch.LongTensor(sens)
+
     # train test split
     non_missing = np.where(sens.numpy() >= 0)[0]
     non_missing_sens = sens.numpy()[non_missing]
@@ -111,6 +129,7 @@ def load_nba(data_name, target_attr, train_ratio, path, split):
     idx_train, idx_test = res[0], res[1]
     idx_train = index_to_mask(torch.LongTensor(idx_train), size=sens.shape[0])
     idx_test = index_to_mask(torch.LongTensor(idx_test), size=sens.shape[0])
+
     # feature matrix
     header = list(idx_features_labels.columns)
     for attr in ['user_id', 'country', 'SALARY']: header.remove(attr)
@@ -118,19 +137,24 @@ def load_nba(data_name, target_attr, train_ratio, path, split):
     features = torch.FloatTensor(features)
     min_values = features.min(axis=0)[0]
     max_values = features.max(axis=0)[0]
+    #因为如果直接除以范围，可能会导致输出数据范围为 [-1, 1] 或 [0, 1]。但是，在某些神经网络中（如残差块），需要输入数据范围为 [-1, 1]。因此，通过乘以 2，可以将输出数据范围从 [0, 1] 变为 [-1, 1]。
     features = 2 * (features - min_values).div(max_values - min_values) - 1
+
     # edge index
     idx = np.array(idx_features_labels["user_id"], dtype=int)
     idx_map = {j: i for i, j in enumerate(idx)}
     edges_unordered = np.genfromtxt(os.path.join(path, "{}_relationship.txt".format(data_name)), dtype=int)
     edges = torch.tensor(list(map(idx_map.get, edges_unordered.flatten()))).reshape(edges_unordered.shape).t()
+
     # num of cls
     classes = set(sens.numpy())
     classes.discard(-1)
     num_classes = len(classes)
+
     # pyg graph
     data = Data(x=features, edge_index=edges, y=sens, train_mask=idx_train, test_mask=idx_test, num_classes=num_classes)
     data = T.ToUndirected()(data)
+
     return data
 
 
@@ -173,15 +197,21 @@ def load_pokec(dataset, target_attr, train_ratio, path, split):
         attr)
     features = np.array(idx_features_labels[header])
     features = torch.FloatTensor(features)
+
     # edge index
     idx = np.array(idx_features_labels["user_id"], dtype=int)
     idx_map = {j: i for i, j in enumerate(idx)}
+
     edges_unordered = np.genfromtxt(os.path.join(path, "{}_relationship.txt".format(dataset)), dtype=int)
-    edges = torch.tensor(list(map(idx_map.get, edges_unordered.flatten()))).reshape(edges_unordered.shape).t()
+    # edges = torch.tensor(list(map(idx_map.get, edges_unordered.flatten()))).reshape(edges_unordered.shape).t()
+    edges = torch.tensor(list(map(lambda x: idx_map.get(x, -1), edges_unordered.flatten()))).reshape(
+        edges_unordered.shape).t()
+
 
     data = Data(x=features, edge_index=edges, y=target, num_classes=num_classes)
     data = T.ToUndirected()(data)
     data = data.subgraph(torch.tensor(non_missing_label))
+
     # split train and test
     if split:
         non_missing_idx = torch.where(data.y >= 0)[0]
